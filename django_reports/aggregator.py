@@ -1,0 +1,2 @@
+class Aggrigator:
+    pass
