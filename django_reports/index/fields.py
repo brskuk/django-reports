@@ -1,4 +1,5 @@
-from typing import Sequence, Tuple
+"""Classes and utilities for indexing Django model fields."""
+from typing import Optional, Sequence, Tuple, Type
 
 from django.db import models
 
@@ -22,19 +23,19 @@ class Field:
         self.model_field = model_field
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self.model_field.name
 
     @property
-    def is_relation(self):
+    def is_relation(self) -> bool:
         return self.model_field.is_relation
 
     @property
-    def related_model(self):
+    def related_model(self) -> Optional[Type[models.Model]]:
         return self.model_field.related_model
 
     def __new__(cls, *args, **kwargs):
-        """Create a choice variant of the report field if the model field has choices."""
+        """Create a choice variant of the index field if the model field has choices."""
         if kwargs.get("model_field", {}).get("choices") is not None:
             return type(
                 f"{cls.__name__[-5:]}ChoiceField",

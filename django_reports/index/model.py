@@ -1,3 +1,4 @@
+"""Classes and utilities for indexing Django models."""
 from typing import Type
 
 from django.db import models
@@ -17,9 +18,11 @@ class TreeNode:
         return bool(self.children)
 
     def add(self, node):
+        """Add a child `node`."""
         self.children.append(node)
 
     def remove(self, child_node):
+        """Prune `child_node`."""
         self.children.remove(child_node)
 
     def __str__(self) -> str:
@@ -27,6 +30,8 @@ class TreeNode:
 
 
 class FieldTree:
+    """An tree structured index of model fields."""
+
     def __init__(self, root) -> None:
         self.root = root
 
@@ -52,6 +57,7 @@ class FieldTree:
 def create_model_field_branch(
     index_field: fields.Field, visited_models, lookup_path=None
 ) -> TreeNode:
+    """Create a model field tree structure with `index_field` root node."""
     children = []
 
     if lookup_path is not None:
@@ -64,6 +70,8 @@ def create_model_field_branch(
             index_field.related_model
         )
         for index_field in related_model_index_fields:
+            # We want to avoid circular traversals so we ignore relations to models already encountered
+            # in this sub branch.
             if index_field.is_relation and index_field.related_model in visited_models:
                 continue
 
@@ -83,6 +91,7 @@ def create_model_field_branch(
 
 
 def build_model_field_tree(model: Type[models.Model]):
+    """Construct a tree structured index of `model`\'s fields."""
     return FieldTree(
         root=TreeNode(
             field=None,
@@ -95,17 +104,19 @@ def build_model_field_tree(model: Type[models.Model]):
 
 
 class ModelIndex:
+    """Index model information and provide utility methods to access model metadata."""
+
     def __init__(self, model: Type[models.Model]) -> None:
         self._model = model
         self._fields = None
-        self._field_tree = None
+        self._field_index = None
 
     @property
-    def field_tree(self):
-        if self._field_tree is None:
-            self._field_tree = build_model_field_tree(self._model)
+    def field_index(self):
+        if self._field_index is None:
+            self._field_index = build_model_field_tree(self._model)
 
-        return self._field_tree
+        return self._field_index
 
     def look_up_field(self, lookup_expression):
         field_path = lookup_expression.split("__")
