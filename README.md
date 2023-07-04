@@ -1,4 +1,4 @@
-# django_reports
+# Django Reports
 Django reporting engine.
 
 ## Goal
