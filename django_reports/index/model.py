@@ -6,10 +6,11 @@ from django_reports.index import fields
 
 
 class TreeNode:
-    def __init__(self, key, data, children=None, **kwargs) -> None:
-        self.key = key
-        self.data = data
-        self.children = children or []
+    def __init__(self, field=None, **kwargs) -> None:
+        self.key = field and field.name
+        self.field = field
+        self.lookup_path = kwargs.get("lookup_path", "")
+        self.children = kwargs.get("children", [])
 
     @property
     def is_leaf_node(self):
@@ -22,9 +23,7 @@ class TreeNode:
         self.children.remove(child_node)
 
     def __str__(self) -> str:
-        return "<{name}: {children}>".format(
-            name=self.key, children=", ".join(str(child) for child in self.children)
-        )
+        return f"<{self.key} ({self.lookup_path}): {', '.join(str(child) for child in self.children)}>"
 
 
 class FieldTree:
@@ -50,40 +49,47 @@ class FieldTree:
         return str(self.root)
 
 
-def create_model_field_branch(index_field: fields.Field, visited_models) -> TreeNode:
+def create_model_field_branch(
+    index_field: fields.Field, visited_models, lookup_path=None
+) -> TreeNode:
     children = []
 
-    if index_field.is_relation and index_field.related_model not in visited_models:
+    if lookup_path is not None:
+        lookup_path = f"{lookup_path}__{index_field.name}"
+    else:
+        lookup_path = index_field.name
+
+    if index_field.is_relation:
         related_model_index_fields = fields.get_model_index_fields(
             index_field.related_model
         )
-        children = [
-            create_model_field_branch(
-                index_field, {*visited_models, index_field.related_model}
-            )
-            for index_field in related_model_index_fields
-        ]
+        for index_field in related_model_index_fields:
+            if index_field.is_relation and index_field.related_model in visited_models:
+                continue
 
-    node_data = {
-        "field": index_field,
-    }
+            children.append(
+                create_model_field_branch(
+                    index_field,
+                    {*visited_models, index_field.related_model},
+                    lookup_path,
+                )
+            )
 
     return TreeNode(
-        key=index_field.name,
+        field=index_field,
+        lookup_path=lookup_path,
         children=children,
-        data=node_data,
     )
 
 
 def build_model_field_tree(model: Type[models.Model]):
     return FieldTree(
         root=TreeNode(
-            key="root",
+            field=None,
             children=[
                 create_model_field_branch(index_field, visited_models={model})
                 for index_field in fields.get_model_index_fields(model)
             ],
-            data=None,
         )
     )
 
