@@ -117,6 +117,3 @@ class ModelIndex:
             self._field_index = build_model_field_tree(self._model)
 
         return self._field_index
-
-    def look_up_field(self, lookup_expression):
-        field_path = lookup_expression.split("__")
