@@ -1,0 +1,5 @@
+-r development.txt
+-r testing.txt
+-r packaging.txt
+-r optional.txt
+-r documentation.txt
