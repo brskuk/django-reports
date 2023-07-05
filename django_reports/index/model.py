@@ -15,7 +15,7 @@ class TreeNode:
 
     @property
     def is_leaf_node(self):
-        return bool(self.children)
+        return not self.children
 
     def add(self, node):
         """Add a child `node`."""
