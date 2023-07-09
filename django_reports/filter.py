@@ -1,16 +1,23 @@
 from enum import Enum
 from typing import Any, Dict
 
+from django import VERSION as DJANGO_VERSION
 from django.core.exceptions import ValidationError
 from django.db import models
 
 from django_reports.index.models import ModelIndex
 
+SUPPORTS_XOR = DJANGO_VERSION[0] > 4 or (
+    DJANGO_VERSION[0] == 4 and DJANGO_VERSION[1] >= 1
+)
+
 
 class Connector(str, Enum):
     OR = "OR"
     AND = "AND"
-    XOR = "XOR"
+
+    if SUPPORTS_XOR:
+        XOR = "XOR"
 
     def __str__(self):
         return str(self.value)
