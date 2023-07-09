@@ -1,7 +1,14 @@
 import pytest
+from django.core.exceptions import ValidationError
 from django.db import models
 
-from django_reports.filter import SUPPORTS_XOR, Connector, to_query
+from django_reports.filter import (
+    SUPPORTS_XOR,
+    Connector,
+    _validate_filter_connector_node,
+    to_query,
+)
+from tests.conftest import does_not_raise
 
 
 class TestToQuery:
@@ -56,6 +63,7 @@ class TestToQuery:
                     )
                 ),
             ),
+            # Skip this test case if django version under test < 4.1 since XOR is not supported.
             pytest.param(
                 SUPPORTS_XOR
                 and {
@@ -137,3 +145,61 @@ class TestToQuery:
     def test_to_query(self, filter_node_data, expected_query):
         """Test that the correct query instance is instantiated from the filter data dictionary."""
         assert to_query(filter_node_data) == expected_query
+
+
+class TestValidateFilterData:
+    @pytest.mark.parametrize(
+        "filter_node_data,expectation",
+        [
+            # Depends on Django version
+            pytest.param(
+                {"connector": "XOR", "children": ["child1", "child2"]},
+                (
+                    does_not_raise()
+                    if SUPPORTS_XOR
+                    else pytest.raises(
+                        ValidationError, match="'XOR' is not a valid connector"
+                    )
+                ),
+            ),
+            # ==================== Positive Test Cases ====================
+            # Valid filter node data
+            # =============================================================
+            (
+                {"connector": Connector.AND, "children": ["child1", "child2"]},
+                does_not_raise(),
+            ),
+            (
+                {"connector": Connector.OR, "children": ["child1", "child2"]},
+                does_not_raise(),
+            ),
+            # ==================== Negative Test Cases ====================
+            # Invalid filter node data
+            # =============================================================
+            (
+                {
+                    "connector": Connector.AND,
+                },
+                pytest.raises(ValidationError, match="'children' can not be empty."),
+            ),
+            (
+                {
+                    "children": ["child1", "child2"],
+                },
+                pytest.raises(ValidationError, match="'connector' is required."),
+            ),
+            (
+                {
+                    "connector": "INVALID",
+                    "children": ["child1", "child2"],
+                },
+                pytest.raises(
+                    ValidationError, match="'INVALID' is not a valid connector."
+                ),
+            ),
+        ],
+    )
+    def test_validate_filter_connector(self, filter_node_data, expectation):
+        """Test that connector filter node data is validated correctly."""
+        with expectation:
+            _validate_filter_connector_node(filter_node_data)
