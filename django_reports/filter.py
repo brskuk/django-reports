@@ -67,10 +67,9 @@ def to_dict(filter_query):
 
 def validate_filter_data(filter_node_data, field_index):
     """Recursively validate the filter data tree."""
-    children = filter_node_data.get("children")
-    if children:
+    if "children" in filter_node_data:
         _validate_filter_connector_node(filter_node_data)
-        for child_node in children:
+        for child_node in filter_node_data["children"]:
             validate_filter_data(child_node, field_index)
     else:
         _validate_filter_leaf_node(filter_node_data, field_index)
@@ -90,16 +89,10 @@ def _validate_filter_connector_node(filter_node_data):
     elif not children:
         raise ValidationError("'children' can not be empty.", code="required")
 
-    connector = filter_node_data["connector"]
-
-    if connector not in set(Connector):
-        raise ValidationError(f"{connector} is not a valid connector.", code="invalid")
-
 
 def _validate_filter_leaf_node(filter_node_data, field_index):
     """Validate the data that will be used to filter against a specific field."""
     field_path = filter_node_data["path"]
-
     index_field = field_index.find(field_path)
 
     if index_field is None:
