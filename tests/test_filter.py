@@ -7,8 +7,8 @@ from django.db import models
 from django_reports.filter import (
     SUPPORTS_XOR,
     Connector,
-    _validate_filter_leaf_node,
     _validate_filter_connector_node,
+    _validate_filter_leaf_node,
     to_query,
     validate_filter_data,
 )
@@ -159,7 +159,6 @@ class TestValidateFilterData:
     ):
         mock_field_index = Mock(find=Mock(return_value="field"))
         filter_connector_data = {"children": ["child1", "child2"]}
-        filter_leaf_node_data = {"name": "title"}
 
         validate_filter_data(filter_connector_data, mock_field_index)
 
