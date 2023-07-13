@@ -2,6 +2,7 @@
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django_reports.filter import validate_filter_data
 
 from django_reports.validators import validate_model_label
 
@@ -36,7 +37,12 @@ class Report(models.Model):
         verbose_name=_("annotations"), blank=True, default=dict
     )
     # Store information about how the report QS will be filtered (created in 1 week ago to now, type is T, etc.)
-    filters = models.JSONField(verbose_name=_("filters"), blank=True, default=dict)
+    filters = models.JSONField(
+        verbose_name=_("filters"),
+        blank=True,
+        default=dict,
+        validators=[validate_filter_data],
+    )
     # Store information about how the report QS will be aggregated (Group by, Count, Average, etc.)
     aggregations = models.JSONField(verbose_name=_("aggregations"))
 
