@@ -2,8 +2,8 @@
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from django_reports.filter import validate_filter_data
 
+from django_reports.filter import validate_filter_data
 from django_reports.validators import validate_model_label
 
 
