@@ -7,7 +7,7 @@ from django_reports.filter import Connector
 class FilterFieldSerializer(serializers.Serializer):
     """Filter field serializer."""
 
-    field = serializers.CharField()
+    name = serializers.CharField()
     path = serializers.CharField()
 
     def validate_name(self, name):
@@ -26,30 +26,39 @@ class FilterNodeSerializer(serializers.Serializer):
 
     def __new__(cls, *args, **kwargs):
         """Instantiate a `FilterLeafNode` or `FilterConnectorNode` based on the data."""
-        print(args, kwargs)
-        if "data" not in kwargs and len(args) < 2:
-            # This is a nested serializer.
-            return super().__new__(cls, *args, **kwargs)
-        elif "children" in kwargs["data"]:
-            return super().__new__(FilterConnectorNodeSerializer, *args, **kwargs)
+        is_connector_node_data = "children" in kwargs.get("data", {}) or (
+            len(args) >= 2 and "children" in args[1]
+        )
 
-        return super().__new__(FilterLeafNodeSerializer, *args, **kwargs)
+        if is_connector_node_data:
+            return FilterConnectorNodeSerializer(*args, **kwargs)
+
+        return FilterLeafNodeSerializer(*args, **kwargs)
+
+
+class FilterConnectorNodeChildren(serializers.Field):
+    """Filter connector node nested children serializer field."""
+
+    def to_internal_value(self, connector_node_children):
+        """Validate and return the given filter connector node children."""
+        if not connector_node_children:
+            raise serializers.ValidationError(
+                "This field may not be empty.", code="required"
+            )
+
+        children_serializer = FilterNodeSerializer(
+            data=connector_node_children, many=True
+        )
+        children_serializer.is_valid(raise_exception=True)
+
+        return children_serializer.validated_data
 
 
 class FilterConnectorNodeSerializer(serializers.Serializer):
     """Filter connector node serializer."""
 
     connector = serializers.ChoiceField(choices=Connector)
-    children = FilterNodeSerializer(many=True)
-
-    def validate_connector(self, connector):
-        """Validate filter connector."""
-        if connector not in Connector:
-            raise serializers.ValidationError(
-                f"Filter connector must be one of {', '.join(Connector)}.",
-                code="invalid",
-            )
-        return connector
+    children = FilterConnectorNodeChildren()
 
 
 class FilterLeafNodeSerializer(serializers.Serializer):
@@ -58,7 +67,7 @@ class FilterLeafNodeSerializer(serializers.Serializer):
     field = FilterFieldSerializer()
     lookup_expression = serializers.CharField()
     # The type of this value is determined by the field type.
-    value = serializers.Field()
+    value = serializers.CharField()
 
     def validate_lookup_expression(self, lookup_expression):
         """Validate filter lookup expression."""
@@ -69,11 +78,3 @@ class FilterLeafNodeSerializer(serializers.Serializer):
         """Validate filter value."""
         # Todo: Implement filter value validation
         return value
-
-
-class FilterSerializer(serializers.Serializer):
-    """Deserialize report filters."""
-
-    def validate_field(self, field):
-        """Validate filter field."""
-        return field
